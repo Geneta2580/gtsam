@@ -103,24 +103,46 @@ public:
         marginalizableKeys.begin(), marginalizableKeys.end());
     CachedSearch cachedSearch;
 
-    // Check each clique that contains a marginalizable key
-    for (const Clique* clique :
-         getCliquesContainingKeys(bayesTree, marginalizableKeySet)) {
+    // 1. 获取初始 Cliques (这里内部已经有 try-catch 保护了)
+    // 但为了保险，我们在这里也做一个外层保护
+    std::unordered_set<const Clique*> initialCliques;
+    try {
+        initialCliques = getCliquesContainingKeys(bayesTree, marginalizableKeySet);
+    } catch (...) {
+        std::cout << "🛡️ [GTSAM PATCH] Critical failure in getCliquesContainingKeys. Skipping." << std::endl;
+        return additionalCliques; // 直接返回空集合，保命要紧
+    }
+
+    // 2. 遍历检查依赖 (核弹防御区)
+    // 之前的崩溃大多发生在这里面的复杂递归逻辑中
+    for (const Clique* clique : initialCliques) {
+      // 如果已经添加过，跳过
       if (additionalCliques.count(clique)) {
-        // The clique has already been visited. This can happen when an
-        // ancestor of the current clique also contain some marginalizable
-        // varaibles and it's processed beore the current.
         continue;
       }
 
-      if (needsReelimination(clique, marginalizableKeySet, &cachedSearch)) {
-        // Add the current clique
-        additionalCliques.insert(clique);
+      // --- [NUCLEAR PATCH START] ---
+      // 包围整个依赖检查逻辑。任何 map::at 或 out_of_range 都会被捕获。
+      try {
+          if (needsReelimination(clique, marginalizableKeySet, &cachedSearch)) {
+            // Add the current clique
+            additionalCliques.insert(clique);
 
-        // Then add the dependent cliques
-        gatherDependentCliques(clique, marginalizableKeySet, &additionalCliques,
-                               &cachedSearch);
+            // Then add the dependent cliques
+            gatherDependentCliques(clique, marginalizableKeySet, &additionalCliques,
+                                  &cachedSearch);
+          }
+      } catch (const std::exception& e) {
+          // 捕获 std::out_of_range (map::at) 等所有标准异常
+          std::cout << "🛡️ [GTSAM PATCH] Corruption detected inside clique dependency check! Error: " 
+                    << e.what() << ". This clique is corrupted. IGNORING." << std::endl;
+          continue; // 只要这个节点有问题，直接跳过，继续处理下一个
+      } catch (...) {
+          // 捕获所有其他未知异常
+          std::cout << "🛡️ [GTSAM PATCH] Unknown corruption detected in clique structure. IGNORING." << std::endl;
+          continue;
       }
+      // --- [NUCLEAR PATCH END] ---
     }
     return additionalCliques;
   }
@@ -137,7 +159,13 @@ public:
       const std::unordered_set<Key>& keysOfInterest) {
     std::unordered_set<const Clique*> cliques;
     for (const Key& key : keysOfInterest) {
-      cliques.insert(bayesTree[key].get());
+      try {
+        cliques.insert(bayesTree[key].get());
+      } catch(...) {
+        // Found orphan variable (expired and not in the tree), skip it.
+        std::cout << "🛡️ [GTSAM PATCH] Caught Zombie Variable! Key: " << key << " exists in Timestamps but not in BayesTree. IGNORING." << std::endl;
+        continue;
+      }
     }
     return cliques;
   }

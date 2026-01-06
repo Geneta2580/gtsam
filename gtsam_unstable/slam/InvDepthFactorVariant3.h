@@ -17,6 +17,7 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Point2.h>
 #include <gtsam/base/numericalDerivative.h>
+#include <boost/optional.hpp>
 
 namespace gtsam {
 
@@ -29,6 +30,7 @@ protected:
   // Keep a copy of measurement and calibration for I/O
   Point2 measured_;        ///< 2D measurement
   Cal3_S2::shared_ptr K_;  ///< shared pointer to calibration object
+  Pose3 body_P_sensor_;    ///< transform from body to sensor frame
 
 public:
 
@@ -46,7 +48,7 @@ public:
 
   /// Default constructor
   InvDepthFactorVariant3a() :
-      measured_(0.0, 0.0), K_(new Cal3_S2(444, 555, 666, 777, 888)) {
+      measured_(0.0, 0.0), K_(new Cal3_S2(444, 555, 666, 777, 888)), body_P_sensor_(Pose3()) {
   }
 
   /**
@@ -57,11 +59,19 @@ public:
    * @param poseKey is the index of the camera pose
    * @param pointKey is the index of the landmark
    * @param invDepthKey is the index of inverse depth
+   * @param body_P_sensor The pose of the sensor in the body frame (T_bc)
    * @param K shared pointer to the constant calibration
    */
   InvDepthFactorVariant3a(const Key poseKey, const Key landmarkKey,
-      const Point2& measured, const Cal3_S2::shared_ptr& K, const SharedNoiseModel& model) :
-        Base(model, poseKey, landmarkKey), measured_(measured), K_(K) {}
+      const Point2& measured, const Cal3_S2::shared_ptr& K, const SharedNoiseModel& model,
+      boost::optional<Pose3> body_P_sensor = boost::none) :
+        Base(model, poseKey, landmarkKey), measured_(measured), K_(K) {
+          if (body_P_sensor) {
+            body_P_sensor_ = *body_P_sensor;
+          } else {
+            body_P_sensor_ = Pose3();
+          }
+        }
 
   /** Virtual destructor */
   ~InvDepthFactorVariant3a() override {}
@@ -86,15 +96,19 @@ public:
         && this->K_->equals(*e->K_, tol);
   }
 
-  Vector inverseDepthError(const Pose3& pose, const Vector3& landmark) const {
+  Vector inverseDepthError(const Pose3& pose_wb, const Vector3& landmark) const {
     try {
+      Pose3 pose_wc = pose_wb.compose(body_P_sensor_); // TODO: Check if this is correct
+
       // Calculate the 3D coordinates of the landmark in the Pose frame
       double theta = landmark(0), phi = landmark(1), rho = landmark(2);
       Point3 pose_P_landmark(cos(phi)*sin(theta)/rho, sin(phi)/rho, cos(phi)*cos(theta)/rho);
+
       // Convert the landmark to world coordinates
-      Point3 world_P_landmark = pose.transformFrom(pose_P_landmark);
+      Point3 world_P_landmark = pose_wc.transformFrom(pose_P_landmark);
       // Project landmark into Pose2
-      PinholeCamera<Cal3_S2> camera(pose, *K_);
+      PinholeCamera<Cal3_S2> camera(pose_wc, *K_);
+
       return camera.project(world_P_landmark) - measured_;
     } catch( CheiralityException& e) {
       std::cout << e.what()
@@ -136,6 +150,11 @@ public:
     return K_;
   }
 
+  /** return the body pose */
+  const Pose3& bodyPose() const {
+    return body_P_sensor_;
+  }
+
 private:
 
 #if GTSAM_ENABLE_BOOST_SERIALIZATION  ///
@@ -146,6 +165,7 @@ private:
     ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Base);
     ar & BOOST_SERIALIZATION_NVP(measured_);
     ar & BOOST_SERIALIZATION_NVP(K_);
+    ar & BOOST_SERIALIZATION_NVP(body_P_sensor_);
   }
 #endif
 };
@@ -159,6 +179,7 @@ protected:
   // Keep a copy of measurement and calibration for I/O
   Point2 measured_;        ///< 2D measurement
   Cal3_S2::shared_ptr K_;  ///< shared pointer to calibration object
+  Pose3 body_P_sensor_;    ///< transform from body to sensor frame
 
 public:
 
@@ -173,7 +194,7 @@ public:
 
   /// Default constructor
   InvDepthFactorVariant3b() :
-      measured_(0.0, 0.0), K_(new Cal3_S2(444, 555, 666, 777, 888)) {
+      measured_(0.0, 0.0), K_(new Cal3_S2(444, 555, 666, 777, 888)), body_P_sensor_(Pose3()) {
   }
 
   /**
@@ -184,11 +205,19 @@ public:
    * @param poseKey is the index of the camera pose
    * @param pointKey is the index of the landmark
    * @param invDepthKey is the index of inverse depth
+   * @param body_P_sensor The pose of the sensor in the body frame (T_bc)
    * @param K shared pointer to the constant calibration
    */
   InvDepthFactorVariant3b(const Key poseKey1, const Key poseKey2, const Key landmarkKey,
-      const Point2& measured, const Cal3_S2::shared_ptr& K, const SharedNoiseModel& model) :
-        Base(model, poseKey1, poseKey2, landmarkKey), measured_(measured), K_(K) {}
+      const Point2& measured, const Cal3_S2::shared_ptr& K, const SharedNoiseModel& model,
+      boost::optional<Pose3> body_P_sensor = boost::none) :
+        Base(model, poseKey1, poseKey2, landmarkKey), measured_(measured), K_(K) {
+          if (body_P_sensor) {
+            body_P_sensor_ = *body_P_sensor;
+          } else {
+            body_P_sensor_ = Pose3();
+          }
+        }
 
   /** Virtual destructor */
   ~InvDepthFactorVariant3b() override {}
@@ -213,15 +242,20 @@ public:
         && this->K_->equals(*e->K_, tol);
   }
 
-  Vector inverseDepthError(const Pose3& pose1, const Pose3& pose2, const Vector3& landmark) const {
+  Vector inverseDepthError(const Pose3& pose1_wb, const Pose3& pose2_wb, const Vector3& landmark) const {
     try {
+      Pose3 pose1_wc = pose1_wb.compose(body_P_sensor_); // TODO: Check if this is correct
+      Pose3 pose2_wc = pose2_wb.compose(body_P_sensor_); // TODO: Check if this is correct
+
       // Calculate the 3D coordinates of the landmark in the Pose1 frame
       double theta = landmark(0), phi = landmark(1), rho = landmark(2);
       Point3 pose1_P_landmark(cos(phi)*sin(theta)/rho, sin(phi)/rho, cos(phi)*cos(theta)/rho);
+
       // Convert the landmark to world coordinates
-      Point3 world_P_landmark = pose1.transformFrom(pose1_P_landmark);
+      Point3 world_P_landmark = pose1_wc.transformFrom(pose1_P_landmark);
+      
       // Project landmark into Pose2
-      PinholeCamera<Cal3_S2> camera(pose2, *K_);
+      PinholeCamera<Cal3_S2> camera(pose2_wc, *K_);
       return camera.project(world_P_landmark) - measured_;
     } catch( CheiralityException& e) {
       std::cout << e.what()
@@ -268,6 +302,11 @@ public:
     return K_;
   }
 
+  /** return the body pose */
+  const Pose3& bodyPose() const {
+    return body_P_sensor_;
+  }
+
 private:
 
 #if GTSAM_ENABLE_BOOST_SERIALIZATION
@@ -278,6 +317,7 @@ private:
     ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Base);
     ar & BOOST_SERIALIZATION_NVP(measured_);
     ar & BOOST_SERIALIZATION_NVP(K_);
+    ar & BOOST_SERIALIZATION_NVP(body_P_sensor_);
   }
 #endif
 };

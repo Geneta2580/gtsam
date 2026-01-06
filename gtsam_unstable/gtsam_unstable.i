@@ -622,9 +622,11 @@ virtual class InvDepthFactorVariant2 : gtsam::NoiseModelFactor {
 #include <gtsam_unstable/slam/InvDepthFactorVariant3.h>
 virtual class InvDepthFactorVariant3a : gtsam::NoiseModelFactor {
   InvDepthFactorVariant3a(gtsam::Key poseKey, gtsam::Key landmarkKey, const gtsam::Point2& measured, const gtsam::Cal3_S2* K, const gtsam::noiseModel::Base* model);
+  InvDepthFactorVariant3a(gtsam::Key poseKey, gtsam::Key landmarkKey, const gtsam::Point2& measured, const gtsam::Cal3_S2* K, const gtsam::noiseModel::Base* model, const gtsam::Pose3& body_P_sensor);
 };
 virtual class InvDepthFactorVariant3b : gtsam::NoiseModelFactor {
   InvDepthFactorVariant3b(gtsam::Key poseKey1, gtsam::Key poseKey2, gtsam::Key landmarkKey, const gtsam::Point2& measured, const gtsam::Cal3_S2* K, const gtsam::noiseModel::Base* model);
+  InvDepthFactorVariant3b(gtsam::Key poseKey1, gtsam::Key poseKey2, gtsam::Key landmarkKey, const gtsam::Point2& measured, const gtsam::Cal3_S2* K, const gtsam::noiseModel::Base* model, const gtsam::Pose3& body_P_sensor);
 };
 
 
@@ -814,5 +816,22 @@ virtual class ProjectionFactorRollingShutter : gtsam::NoiseModelFactor {
   // enabling serialization functionality
   void serialize() const;
 };
+
+#include <gtsam_unstable/slam/VGGTFactor.h>
+virtual class VGGTFactor : gtsam::NoiseModelFactor {
+  // 默认构造函数
+  VGGTFactor();
+  // 主要构造函数
+  // C++: VGGTFactor(Key key_i, Key key_j, Key key_s, const Pose3& measured, const SharedNoiseModel& model)
+  // SWIG: SharedNoiseModel 对应 const gtsam::noiseModel::Base*
+  VGGTFactor(gtsam::Key key_i, gtsam::Key key_j, gtsam::Key key_s, 
+             const gtsam::Pose3& measured, const gtsam::noiseModel::Base* model);
+
+  const gtsam::Pose3& measured() const;
+  void print(string s = "") const;
+  bool equals(const gtsam::NonlinearFactor& expected, double tol = 1e-9) const;
+  double error(const gtsam::Values& values) const;
+};
+
 
 } //\namespace gtsam
