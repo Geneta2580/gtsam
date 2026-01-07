@@ -11,27 +11,24 @@ namespace gtsam {
 // 这是一个纯粹的误差计算函数，不涉及雅可比
 // 我们把它定义为静态辅助函数，或者直接在 evaluateError 里写 lambda 也可以
 Vector vggt_error_func(const Pose3& pose_i, const Pose3& pose_j, const double& scale, 
-                       const Pose3& measured) {
-    // 1. 旋转误差 (不受 Scale 影响)
+                       const Pose3& measured, const Pose3& T_bc) {
+    // 缩放并转换到body系
+    Point3 t_cam_scaled = scale * measured.translation();
+    Pose3 T_cam_scaled(measured.rotation(), t_cam_scaled);
+    Pose3 T_body_predicted = T_bc.compose(T_cam_scaled).compose(T_bc.inverse());
+
     // predicted_relative = P_i.inverse * P_j
     Pose3 predicted_relative = pose_i.between(pose_j);
+
+    // 1. 旋转误差 (不受 Scale 影响)
     // error_rot = Log( measured.R.inverse * predicted.R )
     // 使用 Rot3::Logmap 计算旋转误差
-    Rot3 R_error = measured.rotation().inverse() * predicted_relative.rotation();
+    Rot3 R_error = T_body_predicted.rotation().inverse() * predicted_relative.rotation();
     Vector3 error_rot = Rot3::Logmap(R_error);
     
     // 2. 平移误差 (受 Scale 影响)
-    // 将物理世界两帧的位移转换到 i 帧的局部坐标系下
-    // t_local = R_i.inv * (t_j - t_i)
-    // Pose3::between 计算的 translation 正好就是 R_i.inv * (t_j - t_i)
-    Point3 t_physical_local = predicted_relative.translation();
-    
-    // VGGT 测量值 (Up-to-scale)
-    Point3 t_vggt = measured.translation();
-    
-    // 目标：t_physical_local - (scale * t_vggt)
-    Point3 error_trans = t_physical_local - (scale * t_vggt);
-    
+    Point3 error_trans = predicted_relative.translation() - T_body_predicted.translation();
+
     // 3. 拼接误差 (6维)
     Vector error = (Vector(6) << error_rot, error_trans).finished();
     return error;
@@ -44,12 +41,12 @@ Vector VGGTFactor::evaluateError(const Pose3& pose_i, const Pose3& pose_j, const
                                  OptionalMatrixType H3) const {
     
     // 1. 计算当前误差值
-    Vector error = vggt_error_func(pose_i, pose_j, scale, measured_);
+    Vector error = vggt_error_func(pose_i, pose_j, scale, measured_, body_P_sensor_);
     
     // 2. 自动计算雅可比 (Numerical Differentiation)
     std::function<Vector(const Pose3&, const Pose3&, const double&)> func =
         [this](const Pose3& pi, const Pose3& pj, const double& s) {
-            return vggt_error_func(pi, pj, s, this->measured_);
+            return vggt_error_func(pi, pj, s, this->measured_, this->body_P_sensor_);
         };
     
     if (H1) {
@@ -83,6 +80,7 @@ void VGGTFactor::print(const std::string& s, const KeyFormatter& keyFormatter) c
               << keyFormatter(this->key<2>()) << ","
               << keyFormatter(this->key<3>()) << ")\n";
     measured_.print("  measured: ");
+    body_P_sensor_.print("  T_bc: ");
     if (this->noiseModel_) {
         this->noiseModel_->print("  noise model: ");
     }
@@ -92,7 +90,8 @@ void VGGTFactor::print(const std::string& s, const KeyFormatter& keyFormatter) c
 bool VGGTFactor::equals(const NonlinearFactor& expected, double tol) const {
     const VGGTFactor* e = dynamic_cast<const VGGTFactor*>(&expected);
     return e != nullptr && Base::equals(expected, tol) &&
-           measured_.equals(e->measured_, tol);
+           measured_.equals(e->measured_, tol) &&
+           body_P_sensor_.equals(e->body_P_sensor_, tol);
 }
 
 } // namespace gtsam

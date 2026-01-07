@@ -27,6 +27,9 @@ class GTSAM_UNSTABLE_EXPORT VGGTFactor: public NoiseModelFactor3<Pose3, Pose3, d
    
    // VGGT 测量的原始相对位姿 (Up-to-scale)
    Pose3 measured_; 
+
+   // 外参
+   Pose3 body_P_sensor_;
  
  public:
 
@@ -44,10 +47,11 @@ class GTSAM_UNSTABLE_EXPORT VGGTFactor: public NoiseModelFactor3<Pose3, Pose3, d
   /// key_j: 后一帧 Pose Key
   /// key_s: 当前 Clip 的 Scale Key
   /// measured: VGGT 推理出的相对位姿 T_ij (包含 R 和 t)
+  /// body_P_sensor: 外参 T_bc
   /// model: 噪声模型 (6维)
   VGGTFactor(Key key_i, Key key_j, Key key_s,
-             const Pose3& measured, const SharedNoiseModel& model) :
-      Base(model, key_i, key_j, key_s), measured_(measured) {
+             const Pose3& measured, const Pose3& body_P_sensor, const SharedNoiseModel& model) :
+      Base(model, key_i, key_j, key_s), measured_(measured), body_P_sensor_(body_P_sensor) {
   }
 
   ~VGGTFactor() override {}
@@ -66,6 +70,7 @@ class GTSAM_UNSTABLE_EXPORT VGGTFactor: public NoiseModelFactor3<Pose3, Pose3, d
 
   /// Access measurement
   const Pose3& measured() const { return measured_; }
+  const Pose3& body_P_sensor() const { return body_P_sensor_; }
 
   /// Print for debugging
   void print(const std::string& s = "", const KeyFormatter& keyFormatter = DefaultKeyFormatter) const override;

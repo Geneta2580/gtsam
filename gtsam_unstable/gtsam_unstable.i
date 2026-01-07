@@ -822,12 +822,13 @@ virtual class VGGTFactor : gtsam::NoiseModelFactor {
   // 默认构造函数
   VGGTFactor();
   // 主要构造函数
-  // C++: VGGTFactor(Key key_i, Key key_j, Key key_s, const Pose3& measured, const SharedNoiseModel& model)
+  // C++: VGGTFactor(Key key_i, Key key_j, Key key_s, const Pose3& measured, const Pose3& body_P_sensor, const SharedNoiseModel& model)
   // SWIG: SharedNoiseModel 对应 const gtsam::noiseModel::Base*
   VGGTFactor(gtsam::Key key_i, gtsam::Key key_j, gtsam::Key key_s, 
-             const gtsam::Pose3& measured, const gtsam::noiseModel::Base* model);
+             const gtsam::Pose3& measured, const gtsam::Pose3& body_P_sensor, const gtsam::noiseModel::Base* model);
 
   const gtsam::Pose3& measured() const;
+  const gtsam::Pose3& body_P_sensor() const;
   void print(string s = "") const;
   bool equals(const gtsam::NonlinearFactor& expected, double tol = 1e-9) const;
   double error(const gtsam::Values& values) const;
