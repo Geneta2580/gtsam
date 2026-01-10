@@ -112,35 +112,7 @@ FixedLagSmoother::Result IncrementalFixedLagSmoother::update(
   if (marginalizableKeys.size() > 0) {
     FastList<Key> leafKeys(marginalizableKeys.begin(),
         marginalizableKeys.end());
-
-    // --- PATCH START ---
-    try {
-      // 1. 尝试高性能的批量边缘化
-      isam_.marginalizeLeaves(leafKeys);
-    } catch (std::exception& e) {
-      // 2. 如果批量操作失败，说明列表里混入了僵尸变量
-      // 我们切换到"安全模式"，逐个尝试边缘化
-      if (debug) {
-         std::cout << "🛡️ [GTSAM PATCH] Batch marginalization failed (" << e.what() 
-                   << "). Switching to individual safe mode." << std::endl;
-      }
-
-      for (const Key& key : leafKeys) {
-        try {
-          // 构造单个 key 的列表进行边缘化
-          FastList<Key> singleKeyList;
-          singleKeyList.push_back(key);
-          isam_.marginalizeLeaves(singleKeyList);
-        } catch (...) {
-          // 3. 捕获单个僵尸变量的异常，并忽略它
-          // 这样正常的变量依然会被处理，不会被僵尸拖累
-          std::cout << "🛡️ [GTSAM PATCH] Ignored Zombie Key in Marginalization: " 
-                    << DefaultKeyFormatter(key) << std::endl;
-        }
-      }
-    }
-    // --- PATCH END ---
-
+    isam_.marginalizeLeaves(leafKeys);
   }
 
   // Remove marginalized keys from the KeyTimestampMap
