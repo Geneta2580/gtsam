@@ -66,6 +66,19 @@ typedef gtsam::GenericProjectionFactor<gtsam::Pose3, gtsam::Point3,
                                        gtsam::Cal3Unified>
     GenericProjectionFactorCal3Unified;
 
+#include <gtsam/slam/InverseDepthFactor.h>
+virtual class InverseDepthFactor : gtsam::NoiseModelFactor {
+  InverseDepthFactor(const gtsam::Point2& measured,
+                     const gtsam::Point2& hostMeasured,
+                     const gtsam::noiseModel::Base* noiseModel,
+                     size_t hostPoseKey, size_t targetPoseKey,
+                     size_t inverseDepthKey, const gtsam::Cal3_S2* K,
+                     const gtsam::Pose3& body_P_sensor);
+  gtsam::Point2 measured() const;
+  gtsam::Point2 hostMeasured() const;
+  gtsam::Cal3_S2* calibration() const;
+};
+
 #include <gtsam/slam/GeneralSFMFactor.h>
 template <CAMERA, LANDMARK>
 virtual class GeneralSFMFactor : gtsam::NoiseModelFactor {
@@ -132,8 +145,10 @@ class SmartProjectionParams {
   void setDegeneracyMode(gtsam::DegeneracyMode degMode);
   void setRankTolerance(double rankTol);
   void setEnableEPI(bool enableEPI);
-  void setLandmarkDistanceThreshold(bool landmarkDistanceThreshold);
-  void setDynamicOutlierRejectionThreshold(bool dynOutRejectionThreshold);
+  void setLandmarkDistanceThreshold(double landmarkDistanceThreshold);
+  void setDynamicOutlierRejectionThreshold(double dynOutRejectionThreshold);
+  void setRetriangulationThreshold(double retriangulationTh);
+  double getRetriangulationThreshold() const;
 };
 
 #include <gtsam/slam/SmartProjectionPoseFactor.h>
@@ -153,6 +168,9 @@ virtual class SmartProjectionPoseFactor : gtsam::NonlinearFactor {
                             const gtsam::SmartProjectionParams& params);
 
   void add(const gtsam::Point2& measured_i, size_t poseKey_i);
+
+  gtsam::TriangulationResult point() const;
+  gtsam::TriangulationResult point(const gtsam::Values& values) const;
 
   // enabling serialization functionality
   void serialize() const;

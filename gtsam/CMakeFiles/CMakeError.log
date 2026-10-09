@@ -1,0 +1,77 @@
+Performing C++ SOURCE FILE Test COMPILER_HAS_WMISSING_OVERRIDE failed with the following output:
+Change Dir: /home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-1USh1J
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_b5910/fast && /usr/bin/make  -f CMakeFiles/cmTC_b5910.dir/build.make CMakeFiles/cmTC_b5910.dir/build
+make[1]: Entering directory '/home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-1USh1J'
+Building CXX object CMakeFiles/cmTC_b5910.dir/src.cxx.o
+/usr/bin/c++ -DCOMPILER_HAS_WMISSING_OVERRIDE  -Wmissing -o CMakeFiles/cmTC_b5910.dir/src.cxx.o -c /home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-1USh1J/src.cxx
+c++: error: unrecognized command line option '-Wmissing'; did you mean '-Waliasing'?
+make[1]: *** [CMakeFiles/cmTC_b5910.dir/build.make:78: CMakeFiles/cmTC_b5910.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-1USh1J'
+make: *** [Makefile:127: cmTC_b5910/fast] Error 2
+
+
+Source file was:
+int main() { return 0; }
+
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-ciUAYL
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_70fe9/fast && /usr/bin/make  -f CMakeFiles/cmTC_70fe9.dir/build.make CMakeFiles/cmTC_70fe9.dir/build
+make[1]: 进入目录“/home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-ciUAYL”
+Building C object CMakeFiles/cmTC_70fe9.dir/src.c.o
+/usr/bin/cc -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_70fe9.dir/src.c.o -c /home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-ciUAYL/src.c
+Linking C executable cmTC_70fe9
+/home/geneta/anaconda3/envs/dpvo/lib/python3.10/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_70fe9.dir/link.txt --verbose=1
+/usr/bin/cc -rdynamic CMakeFiles/cmTC_70fe9.dir/src.c.o -o cmTC_70fe9 
+/usr/bin/ld: CMakeFiles/cmTC_70fe9.dir/src.c.o: in function `main':
+src.c:(.text+0x46): undefined reference to `pthread_create'
+/usr/bin/ld: src.c:(.text+0x52): undefined reference to `pthread_detach'
+/usr/bin/ld: src.c:(.text+0x5e): undefined reference to `pthread_cancel'
+/usr/bin/ld: src.c:(.text+0x6f): undefined reference to `pthread_join'
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_70fe9.dir/build.make:99：cmTC_70fe9] 错误 1
+make[1]: 离开目录“/home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-ciUAYL”
+make: *** [Makefile:127：cmTC_70fe9/fast] 错误 2
+
+
+Source file was:
+#include <pthread.h>
+
+static void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-9ePVXN
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_5d964/fast && /usr/bin/make  -f CMakeFiles/cmTC_5d964.dir/build.make CMakeFiles/cmTC_5d964.dir/build
+make[1]: 进入目录“/home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-9ePVXN”
+Building C object CMakeFiles/cmTC_5d964.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create -o CMakeFiles/cmTC_5d964.dir/CheckFunctionExists.c.o -c /home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-9ePVXN/CheckFunctionExists.c
+Linking C executable cmTC_5d964
+/home/geneta/anaconda3/envs/dpvo/lib/python3.10/site-packages/cmake/data/bin/cmake -E cmake_link_script CMakeFiles/cmTC_5d964.dir/link.txt --verbose=1
+/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=pthread_create -rdynamic CMakeFiles/cmTC_5d964.dir/CheckFunctionExists.c.o -o cmTC_5d964  -lpthreads 
+/usr/bin/ld: 找不到 -lpthreads
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_5d964.dir/build.make:99：cmTC_5d964] 错误 1
+make[1]: 离开目录“/home/geneta/project/gtsam_zhou/gtsam/gtsam/CMakeFiles/CMakeScratch/TryCompile-9ePVXN”
+make: *** [Makefile:127：cmTC_5d964/fast] 错误 2
+
+
+
